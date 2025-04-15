@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversation Branching System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .conversation-container, .editor-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .question {
+            font-size: 18px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .option-btn {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: left;
+            transition: background-color 0.3s;
+        }
+        .option-btn:hover {
+            background-color: #45a049;
+        }
+        .response {
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .history {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #e9f7ef;
+            border-radius: 5px;
+        }
+        .history-item {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .btn {
+            padding: 10px 15px;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+        .reset-btn {
+            background-color: #f44336;
+        }
+        .reset-btn:hover {
+            background-color: #d32f2f;
+        }
+        .editor-btn {
+            background-color: #2196F3;
+        }
+        .editor-btn:hover {
+            background-color: #0b7dda;
+        }
+        .save-btn {
+            background-color: #4CAF50;
+        }
+        .save-btn:hover {
+            background-color: #45a049;
+        }
+        .export-btn {
+            background-color: #ff9800;
+        }
+        .export-btn:hover {
+            background-color: #e68a00;
+        }
+        .import-btn {
+            background-color: #9c27b0;
+        }
+        .import-btn:hover {
+            background-color: #7b1fa2;
+        }
+        .tab-container {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            background-color: #ddd;
+            cursor: pointer;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background-color: white;
+            font-weight: bold;
+        }
+        .editor-section {
+            display: none;
+        }
+        .editor-section.active {
+            display: block;
+        }
+        .conversation-section.active {
+            display: block;
+        }
+        .conversation-section {
+            display: none;
+        }
+        .node-editor {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        .option-editor {
+            margin-left: 20px;
+            padding: 10px;
+            border-left: 2px solid #4CAF50;
+            margin-bottom: 10px;
+        }
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .add-option-btn {
+            background-color: #2196F3;
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+        .remove-btn {
+            background-color: #f44336;
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+        .node-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        .node-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .node-item:hover {
+            background-color: #e0e0e0;
+        }
+        .node-item.selected {
+            background-color: #c8e6c9;
+            font-weight: bold;
+        }
+        #importFile {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="tab-container">
+        <div class="tab active" onclick="switchTab('conversation')">Conversation</div>
+        <div class="tab" onclick="switchTab('editor')">Editor</div>
+    </div>
+
+    <div id="conversation-section" class="conversation-section active">
+        <div class="conversation-container">
+            <h1>Conversation Branching System</h1>
+            
+            <div id="conversation">
+                <div id="current-question" class="question">Do you live there?</div>
+                <div class="options" id="options">
+                    <button class="option-btn" onclick="selectOption('yes', 1)">Yes</button>
+                    <button class="option-btn" onclick="selectOption('no', 1)">No</button>
+                </div>
+                <div id="response" class="response"></div>
+            </div>
+            
+            <div class="history" id="conversation-history">
+                <h3>Conversation History</h3>
+                <div id="history-items"></div>
+            </div>
+            
+            <button class="btn reset-btn" onclick="resetConversation()">Start Over</button>
+            <button class="btn editor-btn" onclick="switchTab('editor')">Edit Conversation</button>
+        </div>
+    </div>
+
+    <div id="editor-section" class="editor-section">
+        <div class="editor-container">
+            <h1>Conversation Editor</h1>
+            
+            <div class="node-list" id="node-list">
+                <h3>Conversation Nodes</h3>
+                <!-- Node list will be populated here -->
+            </div>
+            
+            <button class="btn save-btn" onclick="addNewNode()">Add New Node</button>
+            
+            <div class="node-editor" id="node-editor">
+                <h3>Edit Node</h3>
+                <div id="node-edit-form">
+                    <label for="node-id">Node ID:</label>
+                    <input type="text" id="node-id" placeholder="Unique ID (e.g., 1, 2, 3...)" readonly>
+                    
+                    <label for="node-question">Question:</label>
+                    <input type="text" id="node-question" placeholder="Enter the question...">
+                    
+                    <h4>Options</h4>
+                    <div id="options-container">
+                        <!-- Options will be added here -->
+                    </div>
+                    
+                    <button class="btn add-option-btn" onclick="addOption()">Add Option</button>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn save-btn" onclick="saveConversation()">Save Changes</button>
+                <button class="btn export-btn" onclick="exportConversation()">Export Conversation</button>
+                <button class="btn import-btn" onclick="document.getElementById('importFile').click()">Import Conversation</button>
+                <input type="file" id="importFile" accept=".json" onchange="importConversation(event)">
+                <button class="btn reset-btn" onclick="switchTab('conversation')">Back to Conversation</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Default conversation tree
+        let conversationTree = {
+            1: {
+                question: "Do you live there?",
+                options: {
+                    yes: {
+                        response: "I see! How long have you lived there?",
+                        nextQuestionId: 2
+                    },
+                    no: {
+                        response: "Oh, are you just visiting then?",
+                        nextQuestionId: 3
+                    }
+                }
+            },
+            2: {
+                question: "How long have you lived there?",
+                options: {
+                    "Less than a year": {
+                        response: "You're still pretty new to the area then!",
+                        nextQuestionId: 4
+                    },
+                    "1-5 years": {
+                        response: "You must be pretty familiar with the neighborhood by now.",
+                        nextQuestionId: 4
+                    },
+                    "More than 5 years": {
+                        response: "Wow, you're practically a local expert!",
+                        nextQuestionId: 4
+                    }
+                }
+            },
+            3: {
+                question: "Are you just visiting then?",
+                options: {
+                    yes: {
+                        response: "That's nice! How are you enjoying your visit?",
+                        nextQuestionId: 5
+                    },
+                    no: {
+                        response: "Oh, so you're planning to move there?",
+                        nextQuestionId: 6
+                    }
+                }
+            },
+            4: {
+                question: "Do you like living in that area?",
+                options: {
+                    yes: {
+                        response: "That's great! What's your favorite thing about living there?",
+                        nextQuestionId: 7
+                    },
+                    no: {
+                        response: "I'm sorry to hear that. Are you planning to move somewhere else?",
+                        nextQuestionId: 8
+                    }
+                }
+            },
+            5: {
+                question: "How are you enjoying your visit?",
+                options: {
+                    "It's great!": {
+                        response: "Wonderful! What's been your favorite place to visit so far?",
+                        nextQuestionId: 9
+                    },
+                    "It's okay": {
+                        response: "I see. What would make your visit better?",
+                        nextQuestionId: 10
+                    },
+                    "Not enjoying it": {
+                        response: "I'm sorry to hear that. What's been disappointing?",
+                        nextQuestionId: 11
+                    }
+                }
+            },
+            6: {
+                question: "Are you planning to move there?",
+                options: {
+                    yes: {
+                        response: "How exciting! When are you planning to move?",
+                        nextQuestionId: 12
+                    },
+                    no: {
+                        response: "I see. So what brings you to that area?",
+                        nextQuestionId: 13
+                    }
+                }
+            },
+            7: {
+                question: "What's your favorite thing about living there?",
+                options: {
+                    "The people": {
+                        response: "Community is so important! It's great you've found good people there.",
+                        nextQuestionId: null
+                    },
+                    "The location": {
+                        response: "Location is key! It's wonderful when you find the perfect spot.",
+                        nextQuestionId: null
+                    },
+                    "The amenities": {
+                        response: "Having good amenities nearby makes life so much more convenient!",
+                        nextQuestionId: null
+                    }
+                }
+            },
+            8: {
+                question: "Are you planning to move somewhere else?",
+                options: {
+                    yes: {
+                        response: "Change can be good! I hope you find a place you love.",
+                        nextQuestionId: null
+                    },
+                    no: {
+                        response: "Sometimes we have to make the best of our current situation.",
+                        nextQuestionId: null
+                    },
+                    "Not sure yet": {
+                        response: "Taking time to decide is wise. It's a big decision!",
+                        nextQuestionId: null
+                    }
+                }
+            },
+            9: {
+                question: "What's been your favorite place to visit so far?",
+                options: {
+                    "Local attractions": {
+                        response: "The local spots often have the most authentic experiences!",
+                        nextQuestionId: null
+                    },
+                    "Tourist sites": {
+                        response: "The famous spots are popular for a reason! Hope you got some great photos.",
+                        nextQuestionId: null
+                    },
+                    "Restaurants and cafes": {
+                        response: "Food is such an important part of experiencing a new place!",
+                        nextQuestionId: null
+                    }
+                }
+            },
+            10: {
+                question: "What would make your visit better?",
+                options: {
+                    "Better weather": {
+                        response: "Weather can really impact a trip! Hopefully it improves for you.",
+                        nextQuestionId: null
+                    },
+                    "More time": {
+                        response: "There never seems to be enough time to see everything, does there?",
+                        nextQuestionId: null
+                    },
+                    "Local recommendations": {
+                        response: "Talking to locals can really enhance your experience!",
+                        nextQuestionId: null
+                    }
+                }
+            },
+            11: {
+                question: "What's been disappointing?",
+                options: {
+                    "Too crowded": {
+                        response: "Crowds can definitely take away from the experience. Maybe try visiting some less popular spots?",
+                        nextQuestionId: null
+                    },
+                    "Too expensive": {
+                        response: "Travel costs can add up quickly! There are often free or low-cost alternatives worth exploring.",
+                        nextQuestionId: null
+                    },
+                    "Not what I expected": {
+                        response: "It's frustrating when reality doesn't match expectations. Sometimes the unexpected can lead to new discoveries though!",
+                        nextQuestionId: null
+                    }
+                }
+            },
+            12: {
+                question: "When are you planning to move?",
+                options: {
+                    "Within a month": {
+                        response: "That's coming up quickly! I wish you a smooth transition to your new home.",
+                        nextQuestionId: null
+                    },
+                    "In a few months": {
+                        response: "That gives you some time to prepare. Moving can be both exciting and stressful!",
+                        nextQuestionId: null
+                    },
+                    "Next year": {
+                        response: "You have plenty of time to plan. I hope everything goes well with your move when the time comes!",
+                        nextQuestionId: null
+                    }
+                }
+            },
+            13: {
+                question: "What brings you to that area?",
+                options: {
+                    "Work": {
+                        response: "Work takes us to many places! I hope it's a good opportunity for you.",
+                        nextQuestionId: null
+                    },
+                    "Family": {
+                        response: "Family connections are important. It's nice you're able to visit them.",
+                        nextQuestionId: null
+                    },
+                    "Just exploring": {
+                        response: "Exploration is a wonderful reason to visit new places! I hope you discover something interesting.",
+                        nextQuestionId: null
+                    }
+                }
+            }
+        };
+
+        let currentQuestionId = 1;
+        let selectedNodeId = null;
+        
+        // Conversation Functions
+        function selectOption(option, questionId) {
+            const questionData = conversationTree[questionId];
+            const selectedOption = questionData.options[option];
+            
+            // Display the response
+            const responseElement = document.getElementById('response');
+            responseElement.textContent = selectedOption.response;
+            responseElement.style.display = 'block';
+            
+            // Add to history
+            const historyItemsElement = document.getElementById('history-items');
+            const historyItem = document.createElement('div');
+            historyItem.className = 'history-item';
+            historyItem.innerHTML = `
+                <div><strong>Q: ${questionData.question}</strong></div>
+                <div>A: ${option}</div>
+                <div><em>${selectedOption.response}</em></div>
+            `;
+            historyItemsElement.appendChild(historyItem);
+            
+            // Clear options
+            document.getElementById('options').innerHTML = '';
+            
+            // If there's a next question, display it after a short delay
+            if (selectedOption.nextQuestionId) {
+                setTimeout(() => {
+                    displayQuestion(selectedOption.nextQuestionId);
+                }, 1000);
+            } else {
+                // End of conversation
+                setTimeout(() => {
+                    document.getElementById('current-question').textContent = "Thanks for chatting!";
+                    responseElement.style.display = 'none';
+                }, 1000);
+            }
+        }
+        
+        function displayQuestion(questionId) {
+            currentQuestionId = questionId;
+            const questionData = conversationTree[questionId];
+            
+            // Update question text
+            document.getElementById('current-question').textContent = questionData.question;
+            
+            // Clear previous response
+            const responseElement = document.getElementById('response');
+            responseElement.style.display = 'none';
+            
+            // Create option buttons
+            const optionsElement = document.getElementById('options');
+            optionsElement.innerHTML = '';
+            
+            for (const [option, data] of Object.entries(questionData.options)) {
+                const button = document.createElement('button');
+                button.className = 'option-btn';
+                button.textContent = option;
+                button.onclick = () => selectOption(option, questionId);
+                optionsElement.appendChild(button);
+            }
+        }
+        
+        function resetConversation() {
+            // Clear history
+            document.getElementById('history-items').innerHTML = '';
+            
+            // Reset to first question
+            displayQuestion(1);
+        }
+        
+        // Editor Functions
+        function switchTab(tabName) {
+            // Update tab classes
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            
+            // Show/hide sections
+            document.getElementById('conversation-section').classList.remove('active');
+            document.getElementById('editor-section').classList.remove('active');
+            document.getElementById(`${tabName}-section`).classList.add('active');
+            
+            // If switching to editor, populate the node list
+            if (tabName === 'editor') {
+                populateNodeList();
+            } else if (tabName === 'conversation') {
+                // If switching to conversation, reset it to ensure it's using the latest tree
+                resetConversation();
+            }
+        }
+        
+        function populateNodeList() {
+            const nodeList = document.getElementById('node-list');
+            nodeList.innerHTML = '<h3>Conversation Nodes</h3>';
+            
+            for (const [id, node] of Object.entries(conversationTree)) {
+                const nodeItem = document.createElement('div');
+                nodeItem.className = 'node-item';
+                if (selectedNodeId === id) {
+                    nodeItem.classList.add('selected');
+                }
+                nodeItem.textContent = `Node ${id}: ${node.question}`;
+                nodeItem.onclick = () => selectNode(id);
+                nodeList.appendChild(nodeItem);
+            }
+        }
+        
+        function selectNode(nodeId) {
+            selectedNodeId = nodeId;
+            populateNodeList(); // Refresh list to show selection
+            
+            const node = conversationTree[nodeId];
+            document.getElementById('node-id').value = nodeId;
+            document.getElementById('node-question').value = node.question;
+            
+            // Clear and populate options
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+            
+            for (const [optionText, optionData] of Object.entries(node.options)) {
+                addOptionToForm(optionText, optionData.response, optionData.nextQuestionId);
+            }
+        }
+        
+        function addOptionToForm(optionText = '', response = '', nextQuestionId = null) {
+            const optionsContainer = document.getElementById('options-container');
+            const optionDiv = document.createElement('div');
+            optionDiv.className = 'option-editor';
+            
+            optionDiv.innerHTML = `
+                <label>Option Text:</label>
+                <input type="text" class="option-text" value="${optionText}" placeholder="Enter option text...">
+                
+                <label>Response:</label>
+                <textarea class="option-response" placeholder="Enter response...">${response}</textarea>
+                
+                <label>Next Question ID (leave empty for end of conversation):</label>
+                <input type="text" class="next-question-id" value="${nextQuestionId || ''}" placeholder="Enter next question ID...">
+                
+                <button class="btn remove-btn" onclick="this.parentElement.remove()">Remove Option</button>
+            `;
+            
+            optionsContainer.appendChild(optionDiv);
+        }
+        
+        function addOption() {
+            addOptionToForm();
+        }
+        
+        function saveNodeChanges() {
+            const nodeId = document.getElementById('node-id').value;
+            const question = document.getElementById('node-question').value;
+            
+            if (!nodeId || !question) {
+                alert('Node ID and question are required!');
+                return false;
+            }
+            
+            const options = {};
+            const optionElements = document.querySelectorAll('.option-editor');
+            
+            for (const optionElement of optionElements) {
+                const optionText = optionElement.querySelector('.option-text').value;
+                const response = optionElement.querySelector('.option-response').value;
+                const nextQuestionId = optionElement.querySelector('.next-question-id').value;
+                
+                if (!optionText || !response) {
+                    alert('All options must have text and a response!');
+                    return false;
+                }
+                
+                options[optionText] = {
+                    response: response,
+                    nextQuestionId: nextQuestionId ? nextQuestionId : null
+                };
+            }
+            
+            conversationTree[nodeId] = {
+                question: question,
+                options: options
+            };
+            
+            return true;
+        }
+        
+        function addNewNode() {
+            // Find the next available node ID
+            const nodeIds = Object.keys(conversationTree).map(id => parseInt(id));
+            const nextId = nodeIds.length > 0 ? Math.max(...nodeIds) + 1 : 1;
+            
+            // Create a new empty node
+            conversationTree[nextId] = {
+                question: "New Question",
+                options: {
+                    "Option 1": {
+                        response: "Response to Option 1",
+                        nextQuestionId: null
+                    }
+                }
+            };
+            
+            // Select the new node
+            populateNodeList();
+            selectNode(nextId.toString());
+        }
+        
+        function saveConversation() {
+            if (selectedNodeId && !saveNodeChanges()) {
+                return; // Don't proceed if there was an error saving the current node
+            }
+            
+            alert('Conversation saved successfully!');
+            populateNodeList();
+        }
+        
+        function exportConversation() {
+            if (selectedNodeId) {
+                saveNodeChanges();
+            }
+            
+            const conversationJSON = JSON.stringify(conversationTree, null, 2);
+            const blob = new Blob([conversationJSON], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'conversation.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        function importConversation(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedTree = JSON.parse(e.target.result);
+                    conversationTree = importedTree;
+                    selectedNodeId = null;
+                    populateNodeList();
+                    alert('Conversation imported successfully!');
+                } catch (error) {
+                    alert('Error importing conversation: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        // Initialize the conversation
+        window.onload = function() {
+            displayQuestion(1);
+        };
+    </script>
+</body>
+</html>

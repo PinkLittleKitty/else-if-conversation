@@ -238,7 +238,8 @@ const elements = {
     exportBtn: document.getElementById('export-btn'),
     importBtn: document.getElementById('import-btn'),
     importFile: document.getElementById('importFile'),
-    backBtn: document.getElementById('back-btn')
+    backBtn: document.getElementById('back-btn'),
+    reportBtn: document.getElementById('report-btn')
 };
 
 // Event Listeners
@@ -264,6 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.importBtn.addEventListener('click', () => elements.importFile.click());
     elements.importFile.addEventListener('change', importConversation);
     elements.backBtn.addEventListener('click', () => switchTab('conversation'));
+    elements.reportBtn.addEventListener('click', generateReport);
 });
 
 // Conversation Functions
@@ -368,8 +370,37 @@ function populateNodeList() {
         if (selectedNodeId === id) {
             nodeItem.classList.add('selected');
         }
-        nodeItem.textContent = `Node ${id}: ${node.question}`;
-        nodeItem.addEventListener('click', () => selectNode(id));
+        
+        // Create a container for the node text and delete button
+        const nodeContent = document.createElement('div');
+        nodeContent.className = 'node-item-content';
+        
+        // Add the node text
+        const nodeText = document.createElement('span');
+        nodeText.textContent = `Node ${id}: ${node.question}`;
+        nodeText.className = 'node-text';
+        nodeText.addEventListener('click', () => selectNode(id));
+        
+        // Add the delete button (except for node 1)
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'btn delete-node-btn';
+        deleteButton.innerHTML = '<i class="fas fa-trash"></i>';
+        deleteButton.title = 'Delete node';
+        deleteButton.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent node selection when clicking delete
+            deleteNode(id);
+        });
+        
+        // Hide delete button for node 1
+        if (id === '1') {
+            deleteButton.style.visibility = 'hidden';
+        }
+        
+        // Assemble the node item
+        nodeContent.appendChild(nodeText);
+        nodeContent.appendChild(deleteButton);
+        nodeItem.appendChild(nodeContent);
+        
         elements.nodeList.appendChild(nodeItem);
     }
 }
@@ -697,3 +728,206 @@ saveConversation = function() {
     showNotification('Conversation saved successfully!', 'success');
     populateNodeList();
 };
+
+// Add a function to check for references to a node before deletion
+function findReferencesToNode(nodeId) {
+    const references = [];
+    
+    for (const [id, node] of Object.entries(conversationTree)) {
+        for (const [option, data] of Object.entries(node.options)) {
+            if (data.nextQuestionId === nodeId) {
+                references.push({
+                    nodeId: id,
+                    option: option
+                });
+            }
+        }
+    }
+    
+    return references;
+}
+
+// Update the deleteNode function to handle references
+function deleteNode(nodeId) {
+    // Don't allow deleting the first node (root node)
+    if (nodeId === '1') {
+        showNotification("Cannot delete the root node (Node 1).", "error");
+        return;
+    }
+    
+    // Check for references to this node
+    const references = findReferencesToNode(nodeId);
+    if (references.length > 0) {
+        const referenceList = references.map(ref => `Node ${ref.nodeId} (option: "${ref.option}")`).join(', ');
+        const confirmMessage = `This node is referenced by: ${referenceList}.\n\nDeleting it will break these connections. Continue?`;
+        
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+    } else {
+        // Standard confirmation
+        if (!confirm(`Are you sure you want to delete Node ${nodeId}? This cannot be undone.`)) {
+            return;
+        }
+    }
+    
+    // Delete the node
+    delete conversationTree[nodeId];
+    
+    // Clear selection if the deleted node was selected
+    if (selectedNodeId === nodeId) {
+        selectedNodeId = null;
+        elements.nodeId.value = '';
+        elements.nodeQuestion.value = '';
+        elements.optionsContainer.innerHTML = '';
+    }
+    
+    // Update the node list
+    populateNodeList();
+    
+    // Show notification
+    showNotification(`Node ${nodeId} has been deleted.`, "success");
+    
+    // Validate the tree to check for broken connections
+    const validation = validateConversationTree();
+    if (!validation.valid) {
+        const nodeList = validation.unreachableNodes.join(', ');
+        showNotification(`Warning: Nodes ${nodeList} are now unreachable!`, 'warning');
+    }
+}
+
+// Add this CSS to the style element in the script
+style.textContent += `
+    .node-item-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+    }
+    
+    .node-text {
+        flex-grow: 1;
+        cursor: pointer;
+    }
+    
+    .delete-node-btn {
+        padding: 4px 8px;
+        background-color: transparent;
+        color: var(--danger-color);
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        opacity: 0.6;
+        transition: opacity 0.2s, background-color 0.2s;
+    }
+    
+    .delete-node-btn:hover {
+        opacity: 1;
+        background-color: rgba(239, 71, 111, 0.1);
+    }
+    
+    .node-item:hover .delete-node-btn {
+        opacity: 0.8;
+    }
+`;
+
+function generateReport() {
+    // Check if there's any conversation history
+    if (elements.historyItems.children.length === 0) {
+        showNotification('No conversation history to report!', 'warning');
+        return;
+    }
+    
+    // Create the report content
+    const reportContent = formatConversationHistory();
+    
+    // Create modal for the report
+    const modal = document.createElement('div');
+    modal.className = 'report-modal';
+    
+    modal.innerHTML = `
+        <div class="report-content">
+            <div class="report-header">
+                <h2><i class="fas fa-file-alt"></i> Conversation Report</h2>
+                <button class="close-report">×</button>
+            </div>
+            <div class="report-body">${reportContent}</div>
+            <div class="report-actions">
+                <button class="btn export-btn" id="download-report-btn">
+                    <i class="fas fa-download"></i> Download Report
+                </button>
+                <button class="btn back-btn close-report-btn">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Add modal to the body
+    document.body.appendChild(modal);
+    
+    // Show the modal with a slight delay for animation
+    setTimeout(() => {
+        modal.classList.add('show');
+    }, 10);
+    
+    // Add event listeners for the modal buttons
+    const closeButtons = modal.querySelectorAll('.close-report, .close-report-btn');
+    closeButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            modal.classList.remove('show');
+            setTimeout(() => {
+                document.body.removeChild(modal);
+            }, 300);
+        });
+    });
+    
+    // Add event listener for the download button
+    const downloadBtn = modal.querySelector('#download-report-btn');
+    downloadBtn.addEventListener('click', () => {
+        downloadReport(reportContent);
+    });
+}
+
+function formatConversationHistory() {
+    let report = "CONVERSATION REPORT\n";
+    report += "===================\n\n";
+    report += `Date: ${new Date().toLocaleString()}\n\n`;
+    report += "CONVERSATION FLOW:\n";
+    report += "===================\n\n";
+    
+    // Get all history items
+    const historyItems = elements.historyItems.children;
+    
+    for (let i = 0; i < historyItems.length; i++) {
+        const item = historyItems[i];
+        const question = item.querySelector('div:nth-child(1)').textContent;
+        const answer = item.querySelector('div:nth-child(2)').textContent;
+        const response = item.querySelector('div:nth-child(3)').textContent;
+        
+        report += `${i + 1}. ${question}\n`;
+        report += `   ${answer}\n`;
+        report += `   ${response}\n\n`;
+    }
+    
+    report += "===================\n";
+    report += "End of Conversation Report";
+    
+    return report;
+}
+
+function downloadReport(content) {
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `conversation-report-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showNotification('Report downloaded successfully!', 'success');
+}

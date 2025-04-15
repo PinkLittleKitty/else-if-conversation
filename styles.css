@@ -567,3 +567,87 @@ textarea {
 ::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
+
+/* Add this to the Buttons section in styles.css */
+.report-btn {
+    background-color: var(--accent-color);
+}
+
+.report-btn:hover {
+    background-color: #3ab7dc;
+}
+
+/* Add this for the report modal */
+.report-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.report-modal.show {
+    display: flex;
+    animation: fadeIn 0.3s;
+}
+
+.report-content {
+    background-color: white;
+    border-radius: var(--border-radius);
+    padding: 30px;
+    max-width: 800px;
+    width: 90%;
+    max-height: 80vh;
+    box-shadow: var(--box-shadow);
+    position: relative;
+}
+
+.report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.report-header h2 {
+    color: var(--primary-color);
+    margin: 0;
+}
+
+.close-report {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--gray-color);
+}
+
+.close-report:hover {
+    color: var(--danger-color);
+}
+
+.report-body {
+    overflow-y: auto;
+    max-height: calc(80vh - 130px);
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: var(--light-gray);
+    border-radius: var(--border-radius);
+    white-space: pre-wrap;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.report-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}

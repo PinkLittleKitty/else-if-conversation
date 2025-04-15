@@ -239,7 +239,11 @@ const elements = {
     importBtn: document.getElementById('import-btn'),
     importFile: document.getElementById('importFile'),
     backBtn: document.getElementById('back-btn'),
-    reportBtn: document.getElementById('report-btn')
+    reportBtn: document.getElementById('report-btn'),
+    treeView: document.getElementById('tree-view'),
+    zoomInBtn: document.getElementById('zoom-in-btn'),
+    zoomOutBtn: document.getElementById('zoom-out-btn'),
+    resetZoomBtn: document.getElementById('reset-zoom-btn')
 };
 
 // Event Listeners
@@ -266,6 +270,9 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.importFile.addEventListener('change', importConversation);
     elements.backBtn.addEventListener('click', () => switchTab('conversation'));
     elements.reportBtn.addEventListener('click', generateReport);
+    elements.zoomInBtn.addEventListener('click', () => zoomTree(0.1));
+    elements.zoomOutBtn.addEventListener('click', () => zoomTree(-0.1));
+    elements.resetZoomBtn.addEventListener('click', resetTreeZoom);
 });
 
 // Conversation Functions
@@ -358,6 +365,9 @@ function switchTab(tabName) {
     } else if (tabName === 'conversation') {
         // If switching to conversation, reset it to ensure it's using the latest tree
         resetConversation();
+    } else if (tabName === 'tree-view') {
+        // If switching to tree view, render the tree
+        renderConversationTree();
     }
 }
 
@@ -930,4 +940,532 @@ function downloadReport(content) {
     URL.revokeObjectURL(url);
     
     showNotification('Report downloaded successfully!', 'success');
+}
+
+// Add these variables for tree view at the top of your script
+let treeScale = 1;
+const treeNodeWidth = 220;
+const treeNodeHeight = 130;
+const treeHorizontalSpacing = 150; // Increased from 80
+const treeVerticalSpacing = 150;   // Increased from 100
+
+// Add these variables for drag functionality
+let draggedNode = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+let nodePositions = {}; // Store custom positions
+
+// Make sure these elements are properly defined in your elements object
+// Add these to your existing elements object
+elements.treeView = document.getElementById('tree-view');
+elements.zoomInBtn = document.getElementById('zoom-in-btn');
+elements.zoomOutBtn = document.getElementById('zoom-out-btn');
+elements.resetZoomBtn = document.getElementById('reset-zoom-btn');
+
+// Add these event listeners in your DOMContentLoaded event
+document.addEventListener('DOMContentLoaded', () => {
+    // Your existing event listeners...
+    
+    // Add these new event listeners for tree view
+    elements.zoomInBtn.addEventListener('click', () => zoomTree(0.1));
+    elements.zoomOutBtn.addEventListener('click', () => zoomTree(-0.1));
+    elements.resetZoomBtn.addEventListener('click', resetTreeZoom);
+});
+
+// Update your switchTab function to include the tree view rendering
+function switchTab(tabName) {
+    // Update tab classes
+    elements.tabs.forEach(tab => {
+        tab.classList.remove('active');
+        if (tab.getAttribute('data-tab') === tabName) {
+            tab.classList.add('active');
+        }
+    });
+    
+    // Show/hide sections
+    elements.sections.forEach(section => {
+        section.classList.remove('active');
+        if (section.id === `${tabName}-section`) {
+            section.classList.add('active');
+        }
+    });
+    
+    // If switching to editor, populate the node list
+    if (tabName === 'editor') {
+        populateNodeList();
+    } else if (tabName === 'conversation') {
+        // If switching to conversation, reset it to ensure it's using the latest tree
+        resetConversation();
+    } else if (tabName === 'tree-view') {
+        // If switching to tree view, render the tree
+        renderConversationTree();
+    }
+}
+
+// Modify the calculateTreeLayout function for better spacing
+function calculateTreeLayout() {
+    const layout = {};
+    const queue = [{ id: '1', level: 0, position: 0 }];
+    const levelNodes = {}; // Track nodes at each level
+    
+    // First pass: BFS to calculate relative positions
+    while (queue.length > 0) {
+        const current = queue.shift();
+        const nodeId = current.id;
+        const level = current.level;
+        const position = current.position;
+        
+        // Initialize level arrays if not exists
+        if (!levelNodes[level]) {
+            levelNodes[level] = [];
+        }
+        
+        // Store the position
+        layout[nodeId] = {
+            level: level,
+            position: position
+        };
+        
+        // Add this node to its level
+        levelNodes[level].push({
+            id: nodeId,
+            position: position
+        });
+        
+        // Get the node data
+        const node = conversationTree[nodeId];
+        if (!node) continue;
+        
+        // Count options that lead to another node
+        let optionsWithNext = 0;
+        for (const option of Object.values(node.options)) {
+            if (option.nextQuestionId) {
+                optionsWithNext++;
+            }
+        }
+        
+        // Add child nodes to the queue with more spacing
+        let childPosition = position - (optionsWithNext - 1) * 1.2; // Increased spacing multiplier
+        for (const [optionText, option] of Object.entries(node.options)) {
+            if (option.nextQuestionId) {
+                queue.push({
+                    id: option.nextQuestionId.toString(),
+                    level: level + 1,
+                    position: childPosition,
+                    parentId: nodeId,
+                    optionText: optionText
+                });
+                
+                // Store the connection info in the layout
+                if (!layout[nodeId].connections) {
+                    layout[nodeId].connections = [];
+                }
+                
+                layout[nodeId].connections.push({
+                    target: option.nextQuestionId.toString(),
+                    optionText: optionText
+                });
+                
+                childPosition += 2.4; // Increased spacing between siblings
+            }
+        }
+    }
+    
+    // Second pass: Adjust positions to center each level
+    const maxLevel = Math.max(...Object.keys(levelNodes).map(Number));
+    
+    for (let level = 0; level <= maxLevel; level++) {
+        const nodesAtLevel = levelNodes[level];
+        if (!nodesAtLevel || nodesAtLevel.length === 0) continue;
+        
+        // Find min and max positions at this level
+        const positions = nodesAtLevel.map(n => n.position);
+        const minPos = Math.min(...positions);
+        const maxPos = Math.max(...positions);
+        
+        // Calculate center offset
+        const centerOffset = (minPos + maxPos) / 2;
+        
+        // Adjust positions to center around zero
+        for (const node of nodesAtLevel) {
+            layout[node.id].position = node.position - centerOffset;
+        }
+    }
+    
+    // Third pass: Convert relative positions to absolute coordinates
+    const treeViewWidth = elements.treeView.parentElement.clientWidth;
+    const centerX = treeViewWidth / 2;
+    
+    for (const nodeId in layout) {
+        const nodeLayout = layout[nodeId];
+        const level = nodeLayout.level;
+        const position = nodeLayout.position;
+        
+        // Calculate x and y coordinates
+        let x = centerX + position * (treeNodeWidth + treeHorizontalSpacing);
+        let y = level * (treeNodeHeight + treeVerticalSpacing) + 50; // Add top margin
+        
+        // Use custom position if available
+        if (nodePositions[nodeId]) {
+            x = nodePositions[nodeId].x;
+            y = nodePositions[nodeId].y;
+        }
+        
+        nodeLayout.x = x;
+        nodeLayout.y = y;
+    }
+    
+    return layout;
+}
+
+// Modify the renderConversationTree function to prepare the view
+function renderConversationTree() {
+    // Clear the tree view
+    elements.treeView.innerHTML = '';
+    
+    // Reset zoom
+    resetTreeZoom();
+    
+    // Set minimum size for the tree view to ensure it's scrollable
+    const treeViewWrapper = elements.treeView.parentElement;
+    elements.treeView.style.minWidth = treeViewWrapper.clientWidth + 'px';
+    elements.treeView.style.minHeight = treeViewWrapper.clientHeight + 'px';
+    
+    // Calculate tree layout
+    const treeLayout = calculateTreeLayout();
+    
+    // Determine the size needed for the tree
+    let maxX = 0, maxY = 0;
+    for (const nodeLayout of Object.values(treeLayout)) {
+        maxX = Math.max(maxX, nodeLayout.x + treeNodeWidth + 100);
+        maxY = Math.max(maxY, nodeLayout.y + treeNodeHeight + 100);
+    }
+    
+    // Set the tree view size
+    elements.treeView.style.width = Math.max(treeViewWrapper.clientWidth, maxX) + 'px';
+    elements.treeView.style.height = Math.max(treeViewWrapper.clientHeight, maxY) + 'px';
+    
+    // Create connections first (so they appear behind nodes)
+    createTreeConnections(treeLayout);
+    
+    // Create nodes
+    createTreeNodes(treeLayout);
+    
+    // Set up drag handlers
+    setupDragHandlers();
+    
+    // Center the view on the root node
+    const rootLayout = treeLayout['1'];
+    if (rootLayout) {
+        treeViewWrapper.scrollLeft = rootLayout.x - treeViewWrapper.clientWidth / 2 + treeNodeWidth / 2;
+        treeViewWrapper.scrollTop = 0; // Start at the top
+    }
+}
+
+function createTreeNodes(layout) {
+    for (const [nodeId, nodeLayout] of Object.entries(layout)) {
+        const node = conversationTree[nodeId];
+        if (!node) continue;
+        
+        // Create node element
+        const nodeElement = document.createElement('div');
+        nodeElement.className = 'tree-node';
+        
+        // Check if it's an end node (no next questions)
+        let isEndNode = true;
+        for (const option of Object.values(node.options)) {
+            if (option.nextQuestionId) {
+                isEndNode = false;
+                break;
+            }
+        }
+        
+        if (isEndNode) {
+            nodeElement.classList.add('end-node');
+        }
+        
+        // Set position
+        nodeElement.style.left = `${nodeLayout.x}px`;
+        nodeElement.style.top = `${nodeLayout.y}px`;
+        
+        // Add content
+        nodeElement.innerHTML = `
+            <div class="tree-node-id">Node ${nodeId}</div>
+            <div class="tree-node-question">${node.question}</div>
+            <div class="tree-node-options">
+                ${Object.keys(node.options).length} option${Object.keys(node.options).length !== 1 ? 's' : ''}
+            </div>
+            <div class="tree-node-handle"><i class="fas fa-arrows-alt"></i></div>
+        `;
+        
+        // Add click event to highlight connections
+        nodeElement.addEventListener('click', (e) => {
+            // Don't trigger if we're dragging
+            if (draggedNode) return;
+            
+            // Remove highlight from all nodes and connections
+            document.querySelectorAll('.tree-node.highlight').forEach(el => {
+                el.classList.remove('highlight');
+            });
+            document.querySelectorAll('.tree-connection.highlight').forEach(el => {
+                el.classList.remove('highlight');
+            });
+            document.querySelectorAll('.tree-option-label.highlight').forEach(el => {
+                el.classList.remove('highlight');
+            });
+            
+            // Highlight this node
+            nodeElement.classList.add('highlight');
+            
+            // Highlight connections from this node
+            if (nodeLayout.connections) {
+                for (const connection of nodeLayout.connections) {
+                    const connectionEl = document.getElementById(`connection-${nodeId}-${connection.target}`);
+                    if (connectionEl) {
+                        connectionEl.classList.add('highlight');
+                    }
+                    
+                    const labelEl = document.getElementById(`label-${nodeId}-${connection.target}`);
+                    if (labelEl) {
+                        labelEl.classList.add('highlight');
+                    }
+                    
+                    // Highlight target node
+                    const targetNodeEl = document.querySelector(`.tree-node[data-id="${connection.target}"]`);
+                    if (targetNodeEl) {
+                        targetNodeEl.classList.add('highlight');
+                    }
+                }
+            }
+        });
+        
+        // Add drag functionality
+        const handle = nodeElement.querySelector('.tree-node-handle');
+        handle.addEventListener('mousedown', (e) => {
+            e.stopPropagation(); // Prevent node selection when starting drag
+            e.preventDefault(); // Prevent text selection during drag
+            
+            draggedNode = nodeElement;
+            
+            // Calculate offset relative to the node, not the handle
+            const nodeRect = nodeElement.getBoundingClientRect();
+            dragOffsetX = e.clientX - nodeRect.left;
+            dragOffsetY = e.clientY - nodeRect.top;
+            
+            nodeElement.classList.add('dragging');
+        });
+        
+        // Set data attribute for node ID
+        nodeElement.setAttribute('data-id', nodeId);
+        nodeElement.setAttribute('data-question', node.question);
+        
+        // Add to tree view
+        elements.treeView.appendChild(nodeElement);
+    }
+}
+
+function createTreeConnections(layout) {
+    for (const [nodeId, nodeLayout] of Object.entries(layout)) {
+        if (!nodeLayout.connections) continue;
+        
+        for (const connection of nodeLayout.connections) {
+            const targetLayout = layout[connection.target];
+            if (!targetLayout) continue;
+            
+            // Calculate start and end points
+            const startX = nodeLayout.x + treeNodeWidth / 2;
+            const startY = nodeLayout.y + treeNodeHeight;
+            const endX = targetLayout.x + treeNodeWidth / 2;
+            const endY = targetLayout.y;
+            
+            // Calculate length and angle
+            const dx = endX - startX;
+            const dy = endY - startY;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            
+            // Create connection element
+            const connectionElement = document.createElement('div');
+            connectionElement.className = 'tree-connection';
+            connectionElement.id = `connection-${nodeId}-${connection.target}`;
+            
+            // Set position and dimensions
+            connectionElement.style.width = `${length}px`;
+            connectionElement.style.left = `${startX}px`;
+            connectionElement.style.top = `${startY}px`;
+            connectionElement.style.transform = `rotate(${angle}deg)`;
+            
+            // Create option label
+            const labelElement = document.createElement('div');
+            labelElement.className = 'tree-option-label';
+            labelElement.id = `label-${nodeId}-${connection.target}`;
+            labelElement.textContent = connection.optionText;
+            
+            // Position the label at the middle of the connection
+            const labelX = startX + dx / 2;
+            const labelY = startY + dy / 2;
+            labelElement.style.left = `${labelX}px`;
+            labelElement.style.top = `${labelY}px`;
+            
+            // Add to tree view
+            elements.treeView.appendChild(connectionElement);
+            elements.treeView.appendChild(labelElement);
+        }
+    }
+}
+
+function zoomTree(delta) {
+    treeScale = Math.max(0.3, Math.min(2, treeScale + delta));
+    elements.treeView.style.transform = `scale(${treeScale})`;
+}
+
+function resetTreeZoom() {
+    treeScale = 1;
+    elements.treeView.style.transform = `scale(${treeScale})`;
+}
+
+// Add these styles for the tree view
+style.textContent += `
+    .tree-node.highlight {
+        border-color: var(--warning-color);
+        box-shadow: 0 0 0 3px rgba(251, 133, 0, 0.3);
+    }
+    
+    .tree-connection.highlight {
+        background-color: var(--warning-color);
+        z-index: 1;
+    }
+    
+    .tree-connection.highlight::after {
+        border-left-color: var(--warning-color);
+    }
+    
+    .tree-option-label.highlight {
+        background-color: var(--warning-color);
+        color: white;
+    }
+`;
+
+// Add mouse move and mouse up handlers for dragging
+function setupDragHandlers() {
+    elements.treeView.addEventListener('mousemove', (e) => {
+        if (!draggedNode) return;
+        
+        const treeRect = elements.treeView.getBoundingClientRect();
+        const treeViewWrapper = elements.treeView.parentElement;
+        
+        // Calculate position within the tree view, accounting for scrolling
+        const x = e.clientX - treeRect.left + treeViewWrapper.scrollLeft - dragOffsetX;
+        const y = e.clientY - treeRect.top + treeViewWrapper.scrollTop - dragOffsetY;
+        
+        draggedNode.style.left = `${x}px`;
+        draggedNode.style.top = `${y}px`;
+        
+        // Update connections
+        const nodeId = draggedNode.getAttribute('data-id');
+        updateConnections(nodeId, x, y);
+    });
+    
+    elements.treeView.addEventListener('mouseup', () => {
+        if (!draggedNode) return;
+        
+        // Save the new position
+        const nodeId = draggedNode.getAttribute('data-id');
+        const x = parseInt(draggedNode.style.left);
+        const y = parseInt(draggedNode.style.top);
+        
+        nodePositions[nodeId] = { x, y };
+        
+        draggedNode.classList.remove('dragging');
+        draggedNode = null;
+    });
+    
+    // Also handle mouse leaving the tree view
+    elements.treeView.parentElement.addEventListener('mouseleave', () => {
+        if (draggedNode) {
+            draggedNode.classList.remove('dragging');
+            draggedNode = null;
+        }
+    });
+}
+
+// Update connections when a node is moved
+function updateConnections(nodeId, x, y) {
+    // Update connections where this node is the source
+    const outgoingConnections = document.querySelectorAll(`[id^="connection-${nodeId}-"]`);
+    const outgoingLabels = document.querySelectorAll(`[id^="label-${nodeId}-"]`);
+    
+    outgoingConnections.forEach(conn => {
+        const targetId = conn.id.split('-')[2];
+        const targetNode = document.querySelector(`.tree-node[data-id="${targetId}"]`);
+        
+        if (targetNode) {
+            const targetRect = targetNode.getBoundingClientRect();
+            const treeRect = elements.treeView.getBoundingClientRect();
+            
+            const startX = x + treeNodeWidth / 2;
+            const startY = y + treeNodeHeight;
+            const endX = parseInt(targetNode.style.left) + treeNodeWidth / 2;
+            const endY = parseInt(targetNode.style.top);
+            
+            const dx = endX - startX;
+            const dy = endY - startY;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            
+            conn.style.width = `${length}px`;
+            conn.style.left = `${startX}px`;
+            conn.style.top = `${startY}px`;
+            conn.style.transform = `rotate(${angle}deg)`;
+            
+            // Update label position
+            const labelIndex = Array.from(outgoingConnections).indexOf(conn);
+            if (labelIndex >= 0 && outgoingLabels[labelIndex]) {
+                const label = outgoingLabels[labelIndex];
+                label.style.left = `${startX + dx / 2}px`;
+                label.style.top = `${startY + dy / 2}px`;
+            }
+        }
+    });
+    
+    // Update connections where this node is the target
+    for (const otherNodeId in conversationTree) {
+        if (otherNodeId === nodeId) continue;
+        
+        const conn = document.getElementById(`connection-${otherNodeId}-${nodeId}`);
+        const label = document.getElementById(`label-${otherNodeId}-${nodeId}`);
+        
+        if (conn) {
+            const sourceNode = document.querySelector(`.tree-node[data-id="${otherNodeId}"]`);
+            
+            if (sourceNode) {
+                const startX = parseInt(sourceNode.style.left) + treeNodeWidth / 2;
+                const startY = parseInt(sourceNode.style.top) + treeNodeHeight;
+                const endX = x + treeNodeWidth / 2;
+                const endY = y;
+                
+                const dx = endX - startX;
+                const dy = endY - startY;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                
+                conn.style.width = `${length}px`;
+                conn.style.left = `${startX}px`;
+                conn.style.top = `${startY}px`;
+                conn.style.transform = `rotate(${angle}deg)`;
+                
+                // Update label position
+                if (label) {
+                    label.style.left = `${startX + dx / 2}px`;
+                    label.style.top = `${startY + dy / 2}px`;
+                }
+            }
+        }
+    }
+}
+
+// Add a reset layout button function
+function resetTreeLayout() {
+    nodePositions = {}; // Clear custom positions
+    renderConversationTree(); // Re-render the tree
 }

@@ -4,17 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conversation Branching System</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="app-container">
         <header>
-            <h1><i class="fas fa-comments"></i> Lo que me pidió luca</h1>
+            <h1><i class="fas fa-comments"></i> Conversation Branching System</h1>
             <div class="tab-container">
                 <button class="tab active" data-tab="conversation">
                     <i class="fas fa-comment-dots"></i> Conversation
+                </button>
+                <button class="tab" data-tab="tree-view">
+                    <i class="fas fa-project-diagram"></i> Tree View
                 </button>
                 <button class="tab" data-tab="editor">
                     <i class="fas fa-edit"></i> Editor
@@ -46,6 +49,29 @@
                         <button class="btn editor-btn" id="edit-btn">
                             <i class="fas fa-edit"></i> Edit Conversation
                         </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- New Tree View Section -->
+            <section id="tree-view-section" class="section">
+                <div class="tree-view-container">
+                    <div class="tree-view-header">
+                        <h2><i class="fas fa-project-diagram"></i> Conversation Tree View</h2>
+                    </div>
+                    <div class="tree-view-wrapper">
+                        <div id="tree-view" class="tree-view"></div>
+                        <div class="tree-view-controls">
+                            <button class="btn zoom-in-btn" id="zoom-in-btn" title="Zoom In">
+                                <i class="fas fa-search-plus"></i>
+                            </button>
+                            <button class="btn zoom-out-btn" id="zoom-out-btn" title="Zoom Out">
+                                <i class="fas fa-search-minus"></i>
+                            </button>
+                            <button class="btn reset-zoom-btn" id="reset-zoom-btn" title="Reset Zoom">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>

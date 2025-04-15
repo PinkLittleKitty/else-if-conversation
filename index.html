@@ -4,531 +4,110 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conversation Branching System</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .conversation-container, .editor-container {
-            background-color: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-        }
-        .question {
-            font-size: 18px;
-            margin-bottom: 15px;
-            font-weight: bold;
-        }
-        .options {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .option-btn {
-            padding: 10px 15px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            text-align: left;
-            transition: background-color 0.3s;
-        }
-        .option-btn:hover {
-            background-color: #45a049;
-        }
-        .response {
-            padding: 15px;
-            background-color: #f0f0f0;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            display: none;
-        }
-        .history {
-            margin-top: 30px;
-            padding: 15px;
-            background-color: #e9f7ef;
-            border-radius: 5px;
-        }
-        .history-item {
-            margin-bottom: 10px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #ddd;
-        }
-        .btn {
-            padding: 10px 15px;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-right: 10px;
-            margin-top: 10px;
-        }
-        .reset-btn {
-            background-color: #f44336;
-        }
-        .reset-btn:hover {
-            background-color: #d32f2f;
-        }
-        .editor-btn {
-            background-color: #2196F3;
-        }
-        .editor-btn:hover {
-            background-color: #0b7dda;
-        }
-        .save-btn {
-            background-color: #4CAF50;
-        }
-        .save-btn:hover {
-            background-color: #45a049;
-        }
-        .export-btn {
-            background-color: #ff9800;
-        }
-        .export-btn:hover {
-            background-color: #e68a00;
-        }
-        .import-btn {
-            background-color: #9c27b0;
-        }
-        .import-btn:hover {
-            background-color: #7b1fa2;
-        }
-        .tab-container {
-            display: flex;
-            margin-bottom: 20px;
-        }
-        .tab {
-            padding: 10px 20px;
-            background-color: #ddd;
-            cursor: pointer;
-            border-radius: 5px 5px 0 0;
-            margin-right: 5px;
-        }
-        .tab.active {
-            background-color: white;
-            font-weight: bold;
-        }
-        .editor-section {
-            display: none;
-        }
-        .editor-section.active {
-            display: block;
-        }
-        .conversation-section.active {
-            display: block;
-        }
-        .conversation-section {
-            display: none;
-        }
-        .node-editor {
-            border: 1px solid #ddd;
-            padding: 15px;
-            margin-bottom: 15px;
-            border-radius: 5px;
-        }
-        .option-editor {
-            margin-left: 20px;
-            padding: 10px;
-            border-left: 2px solid #4CAF50;
-            margin-bottom: 10px;
-        }
-        input[type="text"], textarea, select {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        .add-option-btn {
-            background-color: #2196F3;
-            padding: 5px 10px;
-            font-size: 14px;
-        }
-        .remove-btn {
-            background-color: #f44336;
-            padding: 5px 10px;
-            font-size: 14px;
-        }
-        .node-list {
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 5px;
-        }
-        .node-item {
-            padding: 8px;
-            margin-bottom: 5px;
-            background-color: #f0f0f0;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .node-item:hover {
-            background-color: #e0e0e0;
-        }
-        .node-item.selected {
-            background-color: #c8e6c9;
-            font-weight: bold;
-        }
-        #importFile {
-            display: none;
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="tab-container">
-        <div class="tab active" onclick="switchTab('conversation')">Conversation</div>
-        <div class="tab" onclick="switchTab('editor')">Editor</div>
-    </div>
+    <div class="app-container">
+        <header>
+            <h1><i class="fas fa-comments"></i> Conversation Branching System</h1>
+            <div class="tab-container">
+                <button class="tab active" data-tab="conversation">
+                    <i class="fas fa-comment-dots"></i> Conversation
+                </button>
+                <button class="tab" data-tab="editor">
+                    <i class="fas fa-edit"></i> Editor
+                </button>
+            </div>
+        </header>
 
-    <div id="conversation-section" class="conversation-section active">
-        <div class="conversation-container">
-            <h1>Conversation Branching System</h1>
-            
-            <div id="conversation">
-                <div id="current-question" class="question">Do you live there?</div>
-                <div class="options" id="options">
-                    <button class="option-btn" onclick="selectOption('yes', 1)">Yes</button>
-                    <button class="option-btn" onclick="selectOption('no', 1)">No</button>
-                </div>
-                <div id="response" class="response"></div>
-            </div>
-            
-            <div class="history" id="conversation-history">
-                <h3>Conversation History</h3>
-                <div id="history-items"></div>
-            </div>
-            
-            <button class="btn reset-btn" onclick="resetConversation()">Start Over</button>
-            <button class="btn editor-btn" onclick="switchTab('editor')">Edit Conversation</button>
-        </div>
-    </div>
-
-    <div id="editor-section" class="editor-section">
-        <div class="editor-container">
-            <h1>Conversation Editor</h1>
-            
-            <div class="node-list" id="node-list">
-                <h3>Conversation Nodes</h3>
-                <!-- Node list will be populated here -->
-            </div>
-            
-            <button class="btn save-btn" onclick="addNewNode()">Add New Node</button>
-            
-            <div class="node-editor" id="node-editor">
-                <h3>Edit Node</h3>
-                <div id="node-edit-form">
-                    <label for="node-id">Node ID:</label>
-                    <input type="text" id="node-id" placeholder="Unique ID (e.g., 1, 2, 3...)" readonly>
-                    
-                    <label for="node-question">Question:</label>
-                    <input type="text" id="node-question" placeholder="Enter the question...">
-                    
-                    <h4>Options</h4>
-                    <div id="options-container">
-                        <!-- Options will be added here -->
+        <main>
+            <section id="conversation-section" class="section active">
+                <div class="conversation-container">
+                    <div id="conversation">
+                        <div id="current-question" class="question"></div>
+                        <div class="options" id="options"></div>
+                        <div id="response" class="response"></div>
                     </div>
                     
-                    <button class="btn add-option-btn" onclick="addOption()">Add Option</button>
+                    <div class="history" id="conversation-history">
+                        <h3><i class="fas fa-history"></i> Conversation History</h3>
+                        <div id="history-items"></div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn reset-btn" id="reset-btn">
+                            <i class="fas fa-redo"></i> Start Over
+                        </button>
+                        <button class="btn editor-btn" id="edit-btn">
+                            <i class="fas fa-edit"></i> Edit Conversation
+                        </button>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="button-group">
-                <button class="btn save-btn" onclick="saveConversation()">Save Changes</button>
-                <button class="btn export-btn" onclick="exportConversation()">Export Conversation</button>
-                <button class="btn import-btn" onclick="document.getElementById('importFile').click()">Import Conversation</button>
-                <input type="file" id="importFile" accept=".json" onchange="importConversation(event)">
-                <button class="btn reset-btn" onclick="switchTab('conversation')">Back to Conversation</button>
-            </div>
-        </div>
+            </section>
+
+            <section id="editor-section" class="section">
+                <div class="editor-container">
+                    <div class="editor-layout">
+                        <div class="editor-sidebar">
+                            <h3><i class="fas fa-sitemap"></i> Conversation Nodes</h3>
+                            <div class="node-list" id="node-list"></div>
+                            <button class="btn add-node-btn" id="add-node-btn">
+                                <i class="fas fa-plus"></i> Add New Node
+                            </button>
+                        </div>
+                        
+                        <div class="editor-main">
+                            <div class="node-editor" id="node-editor">
+                                <h3><i class="fas fa-pen"></i> Edit Node</h3>
+                                <div id="node-edit-form">
+                                    <div class="form-group">
+                                        <label for="node-id">Node ID:</label>
+                                        <input type="text" id="node-id" placeholder="Unique ID (e.g., 1, 2, 3...)" readonly>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="node-question">Question:</label>
+                                        <input type="text" id="node-question" placeholder="Enter the question...">
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <h4><i class="fas fa-list-ul"></i> Options</h4>
+                                        <div id="options-container"></div>
+                                        <button class="btn add-option-btn" id="add-option-btn">
+                                            <i class="fas fa-plus"></i> Add Option
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="editor-actions">
+                        <button class="btn save-btn" id="save-btn">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                        <button class="btn export-btn" id="export-btn">
+                            <i class="fas fa-file-export"></i> Export Conversation
+                        </button>
+                        <button class="btn import-btn" id="import-btn">
+                            <i class="fas fa-file-import"></i> Import Conversation
+                        </button>
+                        <input type="file" id="importFile" accept=".json">
+                        <button class="btn back-btn" id="back-btn">
+                            <i class="fas fa-arrow-left"></i> Back to Conversation
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Conversation Branching System © 2023</p>
+        </footer>
     </div>
 
-    <script>
-        // Default conversation tree
-        let conversationTree = {
-            1: {
-                question: "Do you live in your home?",
-                options: {
-                    yes: {
-                        response: "Fua, epico",
-                        nextQuestionId: 2
-                    },
-                    no: {
-                        response: "Oh, are you just visiting then?",
-                        nextQuestionId: 3
-                    }
-                }
-            }
-        };
-
-        let currentQuestionId = 1;
-        let selectedNodeId = null;
-        
-        // Conversation Functions
-        function selectOption(option, questionId) {
-            const questionData = conversationTree[questionId];
-            const selectedOption = questionData.options[option];
-            
-            // Display the response
-            const responseElement = document.getElementById('response');
-            responseElement.textContent = selectedOption.response;
-            responseElement.style.display = 'block';
-            
-            // Add to history
-            const historyItemsElement = document.getElementById('history-items');
-            const historyItem = document.createElement('div');
-            historyItem.className = 'history-item';
-            historyItem.innerHTML = `
-                <div><strong>Q: ${questionData.question}</strong></div>
-                <div>A: ${option}</div>
-                <div><em>${selectedOption.response}</em></div>
-            `;
-            historyItemsElement.appendChild(historyItem);
-            
-            // Clear options
-            document.getElementById('options').innerHTML = '';
-            
-            // If there's a next question, display it after a short delay
-            if (selectedOption.nextQuestionId) {
-                setTimeout(() => {
-                    displayQuestion(selectedOption.nextQuestionId);
-                }, 1000);
-            } else {
-                // End of conversation
-                setTimeout(() => {
-                    document.getElementById('current-question').textContent = "Thanks for chatting!";
-                    responseElement.style.display = 'none';
-                }, 1000);
-            }
-        }
-        
-        function displayQuestion(questionId) {
-            currentQuestionId = questionId;
-            const questionData = conversationTree[questionId];
-            
-            // Update question text
-            document.getElementById('current-question').textContent = questionData.question;
-            
-            // Clear previous response
-            const responseElement = document.getElementById('response');
-            responseElement.style.display = 'none';
-            
-            // Create option buttons
-            const optionsElement = document.getElementById('options');
-            optionsElement.innerHTML = '';
-            
-            for (const [option, data] of Object.entries(questionData.options)) {
-                const button = document.createElement('button');
-                button.className = 'option-btn';
-                button.textContent = option;
-                button.onclick = () => selectOption(option, questionId);
-                optionsElement.appendChild(button);
-            }
-        }
-        
-        function resetConversation() {
-            // Clear history
-            document.getElementById('history-items').innerHTML = '';
-            
-            // Reset to first question
-            displayQuestion(1);
-        }
-        
-        // Editor Functions
-        function switchTab(tabName) {
-            // Update tab classes
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
-            
-            // Show/hide sections
-            document.getElementById('conversation-section').classList.remove('active');
-            document.getElementById('editor-section').classList.remove('active');
-            document.getElementById(`${tabName}-section`).classList.add('active');
-            
-            // If switching to editor, populate the node list
-            if (tabName === 'editor') {
-                populateNodeList();
-            } else if (tabName === 'conversation') {
-                // If switching to conversation, reset it to ensure it's using the latest tree
-                resetConversation();
-            }
-        }
-        
-        function populateNodeList() {
-            const nodeList = document.getElementById('node-list');
-            nodeList.innerHTML = '<h3>Conversation Nodes</h3>';
-            
-            for (const [id, node] of Object.entries(conversationTree)) {
-                const nodeItem = document.createElement('div');
-                nodeItem.className = 'node-item';
-                if (selectedNodeId === id) {
-                    nodeItem.classList.add('selected');
-                }
-                nodeItem.textContent = `Node ${id}: ${node.question}`;
-                nodeItem.onclick = () => selectNode(id);
-                nodeList.appendChild(nodeItem);
-            }
-        }
-        
-        function selectNode(nodeId) {
-            selectedNodeId = nodeId;
-            populateNodeList(); // Refresh list to show selection
-            
-            const node = conversationTree[nodeId];
-            document.getElementById('node-id').value = nodeId;
-            document.getElementById('node-question').value = node.question;
-            
-            // Clear and populate options
-            const optionsContainer = document.getElementById('options-container');
-            optionsContainer.innerHTML = '';
-            
-            for (const [optionText, optionData] of Object.entries(node.options)) {
-                addOptionToForm(optionText, optionData.response, optionData.nextQuestionId);
-            }
-        }
-        
-        function addOptionToForm(optionText = '', response = '', nextQuestionId = null) {
-            const optionsContainer = document.getElementById('options-container');
-            const optionDiv = document.createElement('div');
-            optionDiv.className = 'option-editor';
-            
-            optionDiv.innerHTML = `
-                <label>Option Text:</label>
-                <input type="text" class="option-text" value="${optionText}" placeholder="Enter option text...">
-                
-                <label>Response:</label>
-                <textarea class="option-response" placeholder="Enter response...">${response}</textarea>
-                
-                <label>Next Question ID (leave empty for end of conversation):</label>
-                <input type="text" class="next-question-id" value="${nextQuestionId || ''}" placeholder="Enter next question ID...">
-                
-                <button class="btn remove-btn" onclick="this.parentElement.remove()">Remove Option</button>
-            `;
-            
-            optionsContainer.appendChild(optionDiv);
-        }
-        
-        function addOption() {
-            addOptionToForm();
-        }
-        
-        function saveNodeChanges() {
-            const nodeId = document.getElementById('node-id').value;
-            const question = document.getElementById('node-question').value;
-            
-            if (!nodeId || !question) {
-                alert('Node ID and question are required!');
-                return false;
-            }
-            
-            const options = {};
-            const optionElements = document.querySelectorAll('.option-editor');
-            
-            for (const optionElement of optionElements) {
-                const optionText = optionElement.querySelector('.option-text').value;
-                const response = optionElement.querySelector('.option-response').value;
-                const nextQuestionId = optionElement.querySelector('.next-question-id').value;
-                
-                if (!optionText || !response) {
-                    alert('All options must have text and a response!');
-                    return false;
-                }
-                
-                options[optionText] = {
-                    response: response,
-                    nextQuestionId: nextQuestionId ? nextQuestionId : null
-                };
-            }
-            
-            conversationTree[nodeId] = {
-                question: question,
-                options: options
-            };
-            
-            return true;
-        }
-        
-        function addNewNode() {
-            // Find the next available node ID
-            const nodeIds = Object.keys(conversationTree).map(id => parseInt(id));
-            const nextId = nodeIds.length > 0 ? Math.max(...nodeIds) + 1 : 1;
-            
-            // Create a new empty node
-            conversationTree[nextId] = {
-                question: "New Question",
-                options: {
-                    "Option 1": {
-                        response: "Response to Option 1",
-                        nextQuestionId: null
-                    }
-                }
-            };
-            
-            // Select the new node
-            populateNodeList();
-            selectNode(nextId.toString());
-        }
-        
-        function saveConversation() {
-            if (selectedNodeId && !saveNodeChanges()) {
-                return; // Don't proceed if there was an error saving the current node
-            }
-            
-            alert('Conversation saved successfully!');
-            populateNodeList();
-        }
-        
-        function exportConversation() {
-            if (selectedNodeId) {
-                saveNodeChanges();
-            }
-            
-            const conversationJSON = JSON.stringify(conversationTree, null, 2);
-            const blob = new Blob([conversationJSON], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'conversation.json';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-        
-        function importConversation(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const importedTree = JSON.parse(e.target.result);
-                    conversationTree = importedTree;
-                    selectedNodeId = null;
-                    populateNodeList();
-                    alert('Conversation imported successfully!');
-                } catch (error) {
-                    alert('Error importing conversation: ' + error.message);
-                }
-            };
-            reader.readAsText(file);
-        }
-        
-        // Initialize the conversation
-        window.onload = function() {
-            displayQuestion(1);
-        };
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>

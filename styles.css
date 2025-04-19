@@ -742,3 +742,22 @@ footer {
         justify-content: space-between;
     }
 }
+
+.continue-btn {
+    background-color: var(--accent-color);
+    margin-top: 20px;
+    align-self: center;
+    width: auto;
+    padding: 12px 25px;
+    transition: var(--transition);
+}
+
+.continue-btn:hover {
+    background-color: #3ab7dc;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(76, 201, 240, 0.3);
+}
+
+.continue-btn i {
+    margin-right: 5px;
+}

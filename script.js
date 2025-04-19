@@ -281,7 +281,7 @@ function selectOption(option, questionId) {
     const selectedOption = questionData.options[option];
     
     // Display the response
-    elements.response.textContent = selectedOption.response;
+    elements.response.innerHTML = selectedOption.response;
     elements.response.style.display = 'block';
     
     // Add to history
@@ -297,17 +297,27 @@ function selectOption(option, questionId) {
     // Clear options
     elements.options.innerHTML = '';
     
-    // If there's a next question, display it after a short delay
+    // If there's a next question, display a continue button inside the response
     if (selectedOption.nextQuestionId) {
-        setTimeout(() => {
+        const continueBtn = document.createElement('button');
+        continueBtn.className = 'btn continue-btn';
+        continueBtn.innerHTML = '<i class="fas fa-arrow-right"></i>';
+        continueBtn.setAttribute('aria-label', 'Continue to next question');
+        continueBtn.title = 'Continue (C)';
+        continueBtn.addEventListener('click', () => {
             displayQuestion(selectedOption.nextQuestionId);
-        }, 1000);
+        });
+        
+        // Add the continue button to the response
+        elements.response.appendChild(document.createElement('br'));
+        elements.response.appendChild(document.createElement('br'));
+        elements.response.appendChild(continueBtn);
     } else {
         // End of conversation
         setTimeout(() => {
             elements.currentQuestion.textContent = "Thanks for chatting!";
             elements.response.style.display = 'none';
-        }, 1000);
+        }, 3000);
     }
 }
 
@@ -324,12 +334,22 @@ function displayQuestion(questionId) {
     // Create option buttons
     elements.options.innerHTML = '';
     
+    let optionIndex = 1;
     for (const [option, data] of Object.entries(questionData.options)) {
         const button = document.createElement('button');
         button.className = 'option-btn';
-        button.textContent = option;
+        
+        // Add keyboard shortcut indicator if it's one of the first 9 options
+        if (optionIndex <= 9) {
+            button.innerHTML = `<span class="option-number">${optionIndex}</span> ${option}`;
+            button.title = `Select this option (${optionIndex})`;
+        } else {
+            button.textContent = option;
+        }
+        
         button.addEventListener('click', () => selectOption(option, questionId));
         elements.options.appendChild(button);
+        optionIndex++;
     }
 }
 
@@ -360,8 +380,7 @@ function switchTab(tabName) {
     });
     
     // If switching to editor, populate the node list
-    if (tabName === 'editor') {
-        populateNodeList();
+    if (tabName === 'editor') {        populateNodeList();
     } else if (tabName === 'conversation') {
         // If switching to conversation, reset it to ensure it's using the latest tree
         resetConversation();
@@ -1469,3 +1488,312 @@ function resetTreeLayout() {
     nodePositions = {}; // Clear custom positions
     renderConversationTree(); // Re-render the tree
 }
+// Add styles for the new elements
+style.textContent += `
+    /* Minimal continue button inside response */
+    .continue-btn {
+        margin-top: 10px;
+        background-color: var(--accent-color);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+        float: right;
+    }
+    
+    .continue-btn:hover {
+        background-color: var(--accent-color-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .continue-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Option number indicator */
+    .option-btn {
+        position: relative;
+        padding-left: 30px;
+    }
+    
+    .option-number {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        background-color: var(--accent-color);
+        color: white;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+    
+    /* Keyboard shortcuts modal */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .modal.show {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 1;
+    }
+    
+    .modal-content {
+        background-color: white;
+        border-radius: var(--border-radius);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        width: 90%;
+        max-width: 700px;
+        max-height: 80vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .modal-header {
+        padding: 15px 20px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .modal-header h2 {
+        margin: 0;
+        font-size: 1.4em;
+        color: var(--text-color);
+    }
+    
+    .modal-body {
+        padding: 20px;
+        overflow-y: auto;
+    }
+    
+    .close-modal {
+        background: none;
+        border: none;
+        font-size: 1.5em;
+        cursor: pointer;
+        color: var(--text-color-light);
+        transition: color 0.2s;
+    }
+    
+    .close-modal:hover {
+        color: var(--danger-color);
+    }
+    
+    /* Shortcuts table styling */
+    .shortcuts-section {
+        margin-bottom: 20px;
+    }
+    
+    .shortcuts-section h3 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        color: var(--accent-color);
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 5px;
+    }
+    
+    .shortcuts-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .shortcuts-table tr:nth-child(odd) {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    .shortcuts-table td {
+        padding: 8px 10px;
+    }
+    
+    .key-cell {
+        width: 100px;
+        text-align: right;
+    }
+    
+    kbd {
+        background-color: #f7f7f7;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+        color: #333;
+        display: inline-block;
+        font-family: monospace;
+        font-size: 0.85em;
+        line-height: 1;
+        padding: 3px 6px;
+        white-space: nowrap;
+    }
+    
+    /* Info button in header */
+    .info-btn {
+        background-color: transparent;
+        color: var(--text-color-light);
+        border: 1px solid var(--border-color);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: auto;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .info-btn:hover {
+        background-color: var(--accent-color-light);
+        color: var(--accent-color);
+    }
+    
+    /* Focus styles for keyboard navigation */
+    button:focus, 
+    input:focus, 
+    textarea:focus, 
+    select:focus {
+        outline: 2px solid var(--accent-color);
+        outline-offset: 2px;
+    }
+    
+    /* Skip to content link for accessibility */
+    .skip-link {
+        position: absolute;
+        top: -40px;
+        left: 0;
+        background: var(--accent-color);
+        color: white;
+        padding: 8px;
+        z-index: 100;
+        transition: top 0.3s;
+    }
+    
+    .skip-link:focus {
+        top: 0;
+    }
+`;
+
+// Add a skip to content link for accessibility
+document.addEventListener('DOMContentLoaded', () => {
+    const skipLink = document.createElement('a');
+    skipLink.href = '#current-question';
+    skipLink.className = 'skip-link';
+    skipLink.textContent = 'Skip to conversation';
+    document.body.insertBefore(skipLink, document.body.firstChild);
+});
+
+// Make sure the tree view is keyboard navigable
+function makeTreeViewKeyboardAccessible() {
+    // Make nodes focusable
+    document.querySelectorAll('.tree-node').forEach(node => {
+        node.setAttribute('tabindex', '0');
+        
+        // Handle keyboard selection
+        node.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                node.click();
+            }
+        });
+    });
+}
+
+// Update the renderConversationTree function to make it keyboard accessible
+const originalRenderConversationTree = renderConversationTree;
+renderConversationTree = function() {
+    originalRenderConversationTree();
+    makeTreeViewKeyboardAccessible();
+};
+
+// Add keyboard navigation for the node list in editor
+function makeNodeListKeyboardAccessible() {
+    document.querySelectorAll('.node-item').forEach(item => {
+        const nodeText = item.querySelector('.node-text');
+        if (nodeText) {
+            nodeText.setAttribute('tabindex', '0');
+            
+            nodeText.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    nodeText.click();
+                }
+            });
+        }
+    });
+}
+
+// Update the populateNodeList function to make it keyboard accessible
+const originalPopulateNodeList = populateNodeList;
+populateNodeList = function() {
+    originalPopulateNodeList();
+    makeNodeListKeyboardAccessible();
+};
+
+// Add ARIA attributes for better screen reader support
+function enhanceAccessibility() {
+    // Add ARIA labels to the tabs
+    document.querySelectorAll('.tab').forEach(tab => {
+        const tabName = tab.getAttribute('data-tab');
+        tab.setAttribute('aria-label', `${tabName} tab`);
+        tab.setAttribute('role', 'tab');
+        tab.setAttribute('aria-selected', tab.classList.contains('active') ? 'true' : 'false');
+    });
+    
+    // Add ARIA labels to the sections
+    document.querySelectorAll('.section').forEach(section => {
+        const sectionId = section.id;
+        const tabName = sectionId.replace('-section', '');
+        section.setAttribute('aria-label', `${tabName} section`);
+        section.setAttribute('role', 'tabpanel');
+    });
+    
+    // Add ARIA labels to the conversation elements
+    elements.currentQuestion.setAttribute('aria-live', 'polite');
+    elements.response.setAttribute('aria-live', 'polite');
+    elements.options.setAttribute('role', 'group');
+    elements.options.setAttribute('aria-label', 'Conversation options');
+    
+    // Add ARIA labels to the history
+    elements.historyItems.setAttribute('aria-label', 'Conversation history');
+}
+
+// Call enhanceAccessibility on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', enhanceAccessibility);
+
+// Update the switchTab function to update ARIA attributes
+const originalSwitchTab = switchTab;
+switchTab = function(tabName) {
+    originalSwitchTab(tabName);
+    
+    // Update ARIA selected state
+    document.querySelectorAll('.tab').forEach(tab => {
+        const isSelected = tab.getAttribute('data-tab') === tabName;
+        tab.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+    });
+};
